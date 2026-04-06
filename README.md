@@ -237,6 +237,25 @@ transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/inp
 
 2. Review the assembly executable script `scripts/assembly.sh`. The script is a simple wrapper that runs hifiasm, converts the output GFA to FASTA, and tarballs the results. For this tutorial, no changes are necessary.
 
+    ```
+    #!/bin/bash
+    set -euo pipefail
+    
+    OUTPUT_PREFIX=$1
+    
+    # Run hifiasm ONT-only assembly
+    hifiasm -t${PYTHON_CPU_COUNT} --ont -o ${OUTPUT_PREFIX}.asm SRR22085263
+    
+    # Convert GFA to FASTA
+    for gfa_file in *.p_ctg.gfa ; do
+      fasta_file="${gfa_file%.gfa}.fa"
+      awk '/^S/{print ">"$2; print $3}' "${gfa_file}" > "${fasta_file}"
+    done
+    
+    # Package outputs
+    tar czf assembly_output.tar.gz *.asm*
+   ```
+
 3. Review the submit file `assembly.sub`:
 
     ```
@@ -244,7 +263,8 @@ transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/inp
     container_image = osdf:///osg-public/containers/hifiasm.sif
 
     executable = scripts/assembly.sh
-
+    arguments = Omalun-Tater
+   
     log = ./logs/assembly.log
     output = assembly_$(Cluster)_$(Process).out
     error  = assembly_$(Cluster)_$(Process).err
@@ -264,17 +284,15 @@ transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/inp
     # hifiasm for a ~2.4 Gb mammalian genome needs substantial resources
     request_memory = 128GB
     request_disk = 500GB
-    request_cpus = 32
-
-    arguments = Omalun-Tater
+    request_cpus = 16
 
     queue 1
     ```
 
     This submit file:
-    - Uses a pre-built hifiasm container from OSDF
+    - Uses our pre-built hifiasm container from OSDF
     - Transfers the ONT reads from OSDF to the execute node
-    - Requests 128 GB of memory, 32 CPU cores, and 500 GB of disk space
+    - Requests 128 GB of memory, 16 CPU cores, and 500 GB of disk space
     - Returns the assembly output as a tarball to `Assembly_Output/`
     - Targets CHTC machines with staging access
 
@@ -504,8 +522,7 @@ Genome assembly with hifiasm is CPU- and memory-intensive but does not require G
 * **Memory is the primary constraint**: hifiasm loads all read overlap information into memory. Insufficient memory is the most common cause of assembly job failure.
 * **Thread scaling**: hifiasm scales well with multiple threads. Request as many CPUs as you need threads (up to 32-64 for large genomes).
 * **Disk space**: Budget for raw reads (input) + intermediate files + output. Assembly intermediate files can be several times larger than the raw reads.
-* **No GPU needed**: Unlike workflows such as AlphaFold3, genome assembly is entirely CPU-bound.
-
+* **Runtime and Queue Time**: Assembly can take several hours to days. Use `condor_watch_q` to monitor progress and adjust resource requests if needed. Running large assemblies with high memory requirements may lead to longer queue times, so plan accordingly. Very large assemblies may require 512+ GB of RAM, will likely take 12-48hrs to start up.
 If you would like to learn more about CHTC compute resources, please visit the [CHTC Documentation Portal](https://chtc.cs.wisc.edu/uw-research-computing/).
 
 

@@ -13,4 +13,4 @@ for gfa_file in *.p_ctg.gfa ; do
 done
 
 # Package outputs
-tar czf assembly_output.tar.gz ${OUTPUT_PREFIX}.asm*
+tar czf assembly_output.tar.gz *.asm*
