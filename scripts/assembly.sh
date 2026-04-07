@@ -4,7 +4,10 @@ set -euo pipefail
 OUTPUT_PREFIX=$1
 
 # Run hifiasm ONT-only assembly
-hifiasm -t${PYTHON_CPU_COUNT} --ont -o ${OUTPUT_PREFIX}.asm SRR22085263
+hifiasm -t${PYTHON_CPU_COUNT} --ont -o ${OUTPUT_PREFIX}.asm SRR22085263.fastq.gz
+
+# Cleanup input FASTQ file to save space
+rm SRR22085263.fastq.gz
 
 # Convert GFA to FASTA
 for gfa_file in *.p_ctg.gfa ; do

@@ -105,6 +105,7 @@ You can also download directly from the SRA public bucket:
 
 ```bash
 pelican object get osdf:///aws-opendata/us-east-1/sra-pub-run-odp/sra/SRR22085263/SRR22085263 ./
+fasterq-dump ./SRR22085263
 ```
 
 You can also use the SRA Toolkit to download the reads directly from NCBI:
@@ -222,7 +223,7 @@ If you need a specific version of hifiasm or want to customize the container, yo
 The ONT reads for Tater are pre-staged on OSDF and will be automatically transferred to the execute node by HTCondor. The submit file configures this with:
 
 ```
-transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/input/SRR22085263
+transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/input/SRR22085263.fastq.gz
 ```
 
 > [!IMPORTANT]
@@ -230,6 +231,15 @@ transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/inp
 > ```
 > transfer_input_files = osdf:///chtc/staging/<netid>/my_reads.fastq.gz
 > ```
+
+#### Compressing Your Reads
+Hifiasm can accept compressed FASTQ files directly, so there is no need to decompress your reads before running the assembly. We highly recommend compressing your reads with gzip or another compression tool to reduce storage and transfer times. If your reads are not compressed, you can compress them with:
+
+```bash
+gzip my_reads.fastq
+```
+
+This will reduce the disk requirement for your reads by ~4-5x, which can significantly reduce transfer times and storage costs.
 
 > [!TIP]
 > If you have multiple FASTQ files from the same sequencing run, concatenate them before staging:
@@ -254,7 +264,10 @@ transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/inp
     OUTPUT_PREFIX=$1
     
     # Run hifiasm ONT-only assembly
-    hifiasm -t${PYTHON_CPU_COUNT} --ont -o ${OUTPUT_PREFIX}.asm SRR22085263
+    hifiasm -t${PYTHON_CPU_COUNT} --ont -o ${OUTPUT_PREFIX}.asm SRR22085263.fastq.gz
+    
+    # Cleanup input FASTQ to save disk space
+    rm SRR22085263.fastq.gz
     
     # Convert GFA to FASTA
     for gfa_file in *.p_ctg.gfa ; do
@@ -266,7 +279,7 @@ transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/inp
     tar czf assembly_output.tar.gz *.asm*
    ```
 
-3. Review the submit file `assembly.sub`:
+3. Review the submit file `assembly.sub`. Make sure to modify the `transfer_output_remaps` attribute to reflect your NetID so that the assembly output is transferred back to your staging folder. You may also need to modify the `container_image` and `transfer_input_files` attributes if you are using a different container or input reads.:
 
     ```
     # Container for hifiasm genome assembler
@@ -280,11 +293,11 @@ transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/inp
     error  = assembly_$(Cluster)_$(Process).err
 
     # ONT reads pre-staged on OSDF
-    transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/input/SRR22085263
+    transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/input/SRR22085263.fastq.gz
 
     # Transfer assembly output back to the submit node
     transfer_output_files = assembly_output.tar.gz
-    transfer_output_remaps = "assembly_output.tar.gz=Assembly_Output/assembly_output.tar.gz"
+    transfer_output_remaps = "assembly_output.tar.gz=/staging/<NetID>/tutorial-CHTC-Genome-Assembly/Assembly_Output/assembly_output.tar.gz"
 
     should_transfer_files = YES
     when_to_transfer_output = ON_EXIT
