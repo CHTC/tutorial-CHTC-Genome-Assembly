@@ -8,7 +8,7 @@ For this tutorial we will be using [hifiasm](https://github.com/chhylp123/hifias
 
 This tutorial walks you through assembling the genome of the **Palla's Cat** (*Otocolobus manul*), a small wild cat native to the grasslands and montane steppes of Central Asia. The sequencing data comes from a Palla's Cat named **Tater**, sequenced using Oxford Nanopore's **Ligation Sequencing Kit** by the University of Minnesota. The expected genome size is approximately **2.4 Gb**, comparable to the domestic cat (*Felis catus*).
 
-![Tater the Palla's Cat](https://cdn.manulization.com/images/cqsmOWyaPscW8Y1b_mw-1920.webp)
+<img src="https://cdn.manulization.com/images/cqsmOWyaPscW8Y1b_mw-1920.webp" width="75%">
 
 This tutorial teaches you how to run a genome assembly on CHTC using hifiasm and scalable, high-throughput compute practices. You will learn how to:
 
@@ -49,9 +49,12 @@ All steps run using the HTCondor workload manager and Apptainer containers. The 
 You will need the following before moving forward with the tutorial:
 
 1. [X] A CHTC HTC account. If you do not have one, request access at the [CHTC Account Request Page](https://chtc.cs.wisc.edu/uw-research-computing/form.html).
-2. [X] A CHTC "staging" folder with at least 200 GB of available disk space. If you do not have a staging folder, request one by contacting the [CHTC Research Computing Facilitator Team](mailto:chtc@cs.wisc.edu)
+2. [X] A CHTC "staging" folder with at least 500 GB of available disk space. If you do not have a staging folder, request one by contacting the [CHTC Research Computing Facilitator Team](mailto:chtc@cs.wisc.edu)
 3. [X] Basic familiarity with HTCondor job submission. If you are new to HTCondor, complete the CHTC ["Roadmap to getting started"](https://chtc.cs.wisc.edu/uw-research-computing/htc-roadmap/) and read the ["Practice: Submit HTC Jobs using HTCondor"](https://chtc.cs.wisc.edu/uw-research-computing/htcondor-job-submission).
 4. [X] Basic familiarity with genome assembly workflows.
+
+> [!DANGER]
+> Genome assembly is a resource-intensive process that can easily fail if you do not have sufficient disk space. Make sure you have a staging folder with at least 500 GB of available disk space before proceeding with this tutorial. If you need to request additional disk space, please request it via our [Quota Increase Form](https://chtc.cs.wisc.edu/uw-research-computing/quota-request).
 
 This tutorial also assumes that you:
 
@@ -135,18 +138,13 @@ Genome assembly is the process of reconstructing a genome from sequencing reads.
 3. **Resolving haplotypes** to produce separate assemblies for each parental copy of the genome
 4. **Outputting assembly graphs** in GFA format, which can be converted to FASTA for downstream analysis
 
-### What the Assembly Pipeline Does
-
-- **Inputs**: Raw ONT reads in FASTQ/FASTQ.GZ format
-- **Actions**: Error correction, overlap computation, graph construction, haplotype resolution
-- **Outputs**: Assembly graphs (GFA) and contigs (FASTA) for primary assembly and individual haplotypes
-
 ### Key Characteristics of the Assembly Step
 
 - **CPU-bound and memory-intensive**: hifiasm uses multiple threads and requires significant memory for a mammalian-sized genome. For the Palla's Cat (~2.4 Gb), expect to need 64-128 GB of RAM and 16-32 CPU cores.
 - **No GPU required**: The entire assembly pipeline runs on CPU only.
 - **Data-intensive**: ONT read files for a mammalian genome can be 50-200+ GB. The reads are transferred from OSDF to the execute node by HTCondor.
 - **Runtime**: Assembly of a mammalian genome typically takes 4-12 hours depending on read coverage, genome complexity, and available compute resources.
+- **Large disk usage**: Assemblies generates large intermediate files during assembly. Ensure you request sufficient disk space in your submit file (e.g., 500 GB or more). You will also need suffcient disk space to store the final assembly outputs (e.g., 50-100 GB) as well as the input reads (e.g., 250-750 GB).
 
 
 ## Running Genome Assembly on CHTC
@@ -334,17 +332,23 @@ transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/inp
 
 Resource requirements for hifiasm depend primarily on **genome size** and **read coverage**:
 
-| Genome Size | Coverage | Recommended Memory | Recommended CPUs | Estimated Runtime |
-|-------------|----------|--------------------|------------------|-------------------|
-| < 500 Mb | 30-50x | 16-32 GB | 8-16 | 1-3 hours |
-| 500 Mb - 1 Gb | 30-50x | 32-64 GB | 16-32 | 2-6 hours |
-| 1 - 3 Gb | 30-50x | 64-128 GB | 32 | 4-12 hours |
-| > 3 Gb | 30-50x | 128-256 GB | 32+ | 8-24+ hours |
+| Genome Size   | Coverage  | Recommended Disk | Recommended Memory | Recommended CPUs | Estimated Runtime  |
+|---------------|-----------|-----------------|--------------------|------------------|--------------------|
+| < 500 Mb      | 30-50x    | 100 GB          | 16-32 GB           | 8-16             | 1-3 hours          |
+| 500 Mb - 1 Gb | 30-50x    | 150 GB          | 32-64 GB           | 16-32            | 2-6 hours          |
+| 1 - 3 Gb      | 30-50x    | 300 GB          | 64-128 GB          | 16               | 4-12 hours         |
+| > 3 Gb        | 30-50x    | >500 GB         | 128-256 GB         | 20+              | 8-24+ hours        |
 
-The Palla's Cat genome (~2.4 Gb) falls in the 1-3 Gb range, so this tutorial requests 128 GB of memory and 32 CPUs.
+The Palla's Cat genome (~2.4 Gb) falls in the 1-3 Gb range, so this tutorial requests 128 GB of memory and 16 CPUs.
 
 > [!NOTE]
-> These are guidelines. Actual requirements depend on genome complexity, repeat content, and coverage depth. Highly repetitive genomes may need significantly more memory.
+> These are guidelines. Actual requirements depend on genome complexity, repeat content, and coverage depth. Large and highly repetitive genomes may need significantly more memory. You can use the `retry_request_memory` attribute to automatically retry with more memory if your job fails due to insufficient memory.
+> 
+> ```
+> request_memory = 128GB
+> retry_request_memory = 256GB
+> ```
+> This allows your job to automatically retry with 256 GB of memory if it fails with 128 GB, which can help ensure successful completion without over-requesting resources upfront.
 
 ### Understanding hifiasm Output
 
@@ -358,16 +362,16 @@ ls -lh
 
 hifiasm produces several output files:
 
-| File | Description |
-|------|-------------|
-| `Omalun-Tater.asm.bp.hap1.p_ctg.gfa` | Haplotype 1 primary contigs (assembly graph) |
-| `Omalun-Tater.asm.bp.hap2.p_ctg.gfa` | Haplotype 2 primary contigs (assembly graph) |
-| `Omalun-Tater.asm.bp.p_ctg.gfa` | Combined primary contigs (assembly graph) |
-| `Omalun-Tater.asm.bp.hap1.p_ctg.fa` | Haplotype 1 primary contigs (FASTA, converted by script) |
-| `Omalun-Tater.asm.bp.hap2.p_ctg.fa` | Haplotype 2 primary contigs (FASTA, converted by script) |
-| `Omalun-Tater.asm.bp.p_ctg.fa` | Combined primary contigs (FASTA, converted by script) |
-| `Omalun-Tater.asm.ec.bin` | Error-corrected reads (binary) |
-| `Omalun-Tater.asm.ovlp.*.bin` | Overlap information (binary) |
+| File                                 | Description                                              |
+|--------------------------------------|----------------------------------------------------------|
+| `Omalun-Tater.asm.bp.hap1.p_ctg.gfa` | Haplotype 1 primary contigs (assembly graph)             |
+| `Omalun-Tater.asm.bp.hap2.p_ctg.gfa` | Haplotype 2 primary contigs (assembly graph)             |
+| `Omalun-Tater.asm.bp.p_ctg.gfa`      | Combined primary contigs (assembly graph)                |
+| `Omalun-Tater.asm.bp.hap1.p_ctg.fa`  | Haplotype 1 primary contigs (FASTA, converted by script) |
+| `Omalun-Tater.asm.bp.hap2.p_ctg.fa`  | Haplotype 2 primary contigs (FASTA, converted by script) |
+| `Omalun-Tater.asm.bp.p_ctg.fa`       | Combined primary contigs (FASTA, converted by script)    |
+| `Omalun-Tater.asm.ec.bin`            | Error-corrected reads (binary)                           |
+| `Omalun-Tater.asm.ovlp.*.bin`        | Overlap information (binary)                             |
 
 The **GFA** (Graphical Fragment Assembly) files contain the assembly graph, which captures the full structure of the assembly including potential alternative paths. The **FASTA** files are derived from the GFA files by extracting contig sequences. The `assembly.sh` script automatically converts GFA to FASTA.
 
@@ -397,17 +401,20 @@ For detailed quality metrics (N50, L50, total length), consider running an assem
 
 #### Visualize the Assembly Graph
 
-You can visualize hifiasm's GFA assembly graphs using [Bandage](https://rrwick.github.io/Bandage/), a tool for interactive visualization of assembly graphs. Download the GFA files to your local machine and open them in Bandage:
+You can visualize hifiasm's GFA assembly graphs using [Bandage](https://rrwick.github.io/Bandage/), a tool for interactive visualization of assembly graphs. Download the GFA files to your **local machine** and open them in Bandage:
 
 ```bash
 # From your local machine
 scp <netID>@ap####.chtc.wisc.edu:~/tutorial-CHTC-Genome-Assembly/Assembly_Output/Omalun-Tater.asm.bp.p_ctg.gfa ./
 ```
 
-
 ## Next Steps
 
 Now that you've successfully assembled the Palla's Cat genome on CHTC, here are recommended next steps:
+
+**Combine with ONT Basecalling and QC**
+* If you haven't already, complete the [ONT Basecalling and QC tutorial](https://github.com/CHTC/tutorial-ONT-Basecalling) to learn how to basecall raw ONT signal data. This will give you a deeper understanding of the input data and how it impacts assembly quality.
+* Basecall your own ONT reads with Dorado on CHTC and use those reads as input for hifiasm assembly.
 
 **Assess Assembly Quality**
 * Run QUAST to compute contiguity metrics (N50, total length, number of contigs)
@@ -463,26 +470,26 @@ The script does three things:
 
 ### Glossary
 
-| Term | Definition |
-|------|------------|
-| ONT (Oxford Nanopore Technologies) | Long-read sequencing platform producing reads typically 10-100+ kb in length. |
-| Ligation Sequencing | ONT library preparation method that ligates motor proteins to DNA fragments for sequencing. |
-| hifiasm | Fast haplotype-resolved de novo assembler supporting PacBio HiFi and Oxford Nanopore reads. |
-| Contig | A contiguous assembled sequence derived from overlapping reads. |
-| N50 | Minimum contig length such that 50% of the total assembly is in contigs of this length or longer. A common assembly quality metric. |
-| GFA (Graphical Fragment Assembly) | Standard format for representing assembly graphs, including contigs and their relationships. |
-| FASTA | Standard text format for nucleotide or protein sequences. |
-| FASTQ | Sequence format that includes per-base quality scores alongside the sequence. |
-| Haplotype | One of two copies of each chromosome in a diploid organism. hifiasm can resolve both haplotypes separately. |
-| Coverage / Depth | Average number of sequencing reads covering each position in the genome. Typically 30-50x for de novo assembly. |
-| QUAST | Quality Assessment Tool for genome assemblies -- computes metrics like N50, total length, and number of contigs. |
-| BUSCO | Benchmarking Universal Single-Copy Orthologs -- assesses genome completeness using conserved gene sets. |
-| NanoPlot | Plotting and statistics tool for quality assessment of long-read sequencing data. |
-| HTCondor submit file (`.sub`) | Job description file used by HTCondor to submit tasks to the HTC system. |
-| Apptainer | Container runtime (formerly Singularity) commonly used on HPC/HTC systems to run reproducible environments. |
-| OSDF (Open Science Data Federation) | Federated data delivery infrastructure used for staging and retrieving large files across compute sites. |
-| Pelican | Client tool for transferring data to and from OSDF origins and caches. |
-| Staging (`/staging/`) | CHTC shared filesystem for large file storage, accessible from execute nodes with `HasCHTCStaging`. |
+| Term                                | Definition                                                                                                                          |
+|-------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| ONT (Oxford Nanopore Technologies)  | Long-read sequencing platform producing reads typically 10-100+ kb in length.                                                       |
+| Ligation Sequencing                 | ONT library preparation method that ligates motor proteins to DNA fragments for sequencing.                                         |
+| hifiasm                             | Fast haplotype-resolved de novo assembler supporting PacBio HiFi and Oxford Nanopore reads.                                         |
+| Contig                              | A contiguous assembled sequence derived from overlapping reads.                                                                     |
+| N50                                 | Minimum contig length such that 50% of the total assembly is in contigs of this length or longer. A common assembly quality metric. |
+| GFA (Graphical Fragment Assembly)   | Standard format for representing assembly graphs, including contigs and their relationships.                                        |
+| FASTA                               | Standard text format for nucleotide or protein sequences.                                                                           |
+| FASTQ                               | Sequence format that includes per-base quality scores alongside the sequence.                                                       |
+| Haplotype                           | One of two copies of each chromosome in a diploid organism. hifiasm can resolve both haplotypes separately.                         |
+| Coverage / Depth                    | Average number of sequencing reads covering each position in the genome. Typically 30-50x for de novo assembly.                     |
+| QUAST                               | Quality Assessment Tool for genome assemblies -- computes metrics like N50, total length, and number of contigs.                    |
+| BUSCO                               | Benchmarking Universal Single-Copy Orthologs -- assesses genome completeness using conserved gene sets.                             |
+| NanoPlot                            | Plotting and statistics tool for quality assessment of long-read sequencing data.                                                   |
+| HTCondor submit file (`.sub`)       | Job description file used by HTCondor to submit tasks to the HTC system.                                                            |
+| Apptainer                           | Container runtime (formerly Singularity) commonly used on HPC/HTC systems to run reproducible environments.                         |
+| OSDF (Open Science Data Federation) | Federated data delivery infrastructure used for staging and retrieving large files across compute sites.                            |
+| Pelican                             | Client tool for transferring data to and from OSDF origins and caches.                                                              |
+| Staging (`/staging/`)               | CHTC shared filesystem for large file storage, accessible from execute nodes with `HasCHTCStaging`.                                 |
 
 ### Software
 
@@ -522,19 +529,19 @@ Genome assembly with hifiasm is CPU- and memory-intensive but does not require G
 
 #### Resource guidelines by genome size:
 
-| Genome Size | Coverage | Memory | CPUs | Disk | Estimated Runtime |
-|-------------|----------|--------|------|------|-------------------|
-| < 500 Mb | 30-50x | 16-32 GB | 8-16 | 100 GB | 1-3 hours |
-| 500 Mb - 1 Gb | 30-50x | 32-64 GB | 16-32 | 250 GB | 2-6 hours |
-| 1 - 3 Gb | 30-50x | 64-128 GB | 32 | 500 GB | 4-12 hours |
-| > 3 Gb | 30-50x | 128-256 GB | 32+ | 1 TB | 8-24+ hours |
+| Genome Size   | Coverage  | Memory     | CPUs  | Disk    | Estimated Runtime |
+|---------------|-----------|------------|-------|---------|-------------------|
+| < 500 Mb      | 30-50x    | 16-32 GB   | 8-16  | 100 GB  | 2-6 hours         |
+| 500 Mb - 1 Gb | 30-50x    | 32-64 GB   | 16-32 | 250 GB  | 6-12 hours        |
+| 1 - 3 Gb      | 30-50x    | 64-128 GB  | 16-20 | 500 GB  | 12-24 hours       |
+| > 3 Gb        | 30-50x    | 128-256 GB | 20+   | 750+ GB | 24+ hours         |
 
 #### Key considerations:
 
 * **Memory is the primary constraint**: hifiasm loads all read overlap information into memory. Insufficient memory is the most common cause of assembly job failure.
-* **Thread scaling**: hifiasm scales well with multiple threads. Request as many CPUs as you need threads (up to 32-64 for large genomes).
+* **Thread scaling**: While hifiasm scales well with multiple threads, requesting beyond 16-20 cores may not add much speedup.
 * **Disk space**: Budget for raw reads (input) + intermediate files + output. Assembly intermediate files can be several times larger than the raw reads.
-* **Runtime and Queue Time**: Assembly can take several hours to days. Use `condor_watch_q` to monitor progress and adjust resource requests if needed. Running large assemblies with high memory requirements may lead to longer queue times, so plan accordingly. Very large assemblies may require 512+ GB of RAM, will likely take 12-48hrs to start up.
+* **Runtime and Queue Time**: Assembly can take several hours to days. Use `condor_watch_q` to monitor progress and adjust resource requests if needed. Running large assemblies with high memory requirements may lead to longer queue times, so plan accordingly. Very large assemblies may require 512+ GB of RAM, will likely take 24-48hrs to start up.
 If you would like to learn more about CHTC compute resources, please visit the [CHTC Documentation Portal](https://chtc.cs.wisc.edu/uw-research-computing/).
 
 
