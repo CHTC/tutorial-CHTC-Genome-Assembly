@@ -8,6 +8,8 @@ For this tutorial we will be using [hifiasm](https://github.com/chhylp123/hifias
 
 This tutorial walks you through assembling the genome of the **Palla's Cat** (*Otocolobus manul*), a small wild cat native to the grasslands and montane steppes of Central Asia. The sequencing data comes from a Palla's Cat named **Tater**, sequenced using Oxford Nanopore's **Ligation Sequencing Kit** by the University of Minnesota. The expected genome size is approximately **2.4 Gb**, comparable to the domestic cat (*Felis catus*).
 
+![Tater the Palla's Cat](https://cdn.manulization.com/images/cqsmOWyaPscW8Y1b_mw-1920.webp)
+
 This tutorial teaches you how to run a genome assembly on CHTC using hifiasm and scalable, high-throughput compute practices. You will learn how to:
 
 * **Understand the genome assembly workflow on CHTC**, including how hifiasm maps to CPU and memory resources.
@@ -80,7 +82,7 @@ Estimated time: plan ~1-2 hours for the tutorial walkthrough. The assembly step 
 
 #### About the Dataset
 
-This tutorial uses Oxford Nanopore Ligation Sequencing reads from the Palla's Cat (*Otocolobus manul*). The sample was taken from **Tater**, a Palla's Cat living in Utica Zoo in New York, and sequences by the [University of Minnesota's Faulk Lab](). Learn more about how Tater made history as the first Palla's Cat to have their genome sequence [here](https://twin-cities.umn.edu/news-events/u-m-researchers-map-genome-worlds-grumpiest-cat). The reads have been pre-staged on the Open Science Data Federation (OSDF) for use with this tutorial:
+This tutorial uses Oxford Nanopore Ligation Sequencing reads from the Palla's Cat (*Otocolobus manul*). The sample was taken from **Tater**, a Palla's Cat living in Utica Zoo in New York, and sequences by the [University of Minnesota's Faulk Lab](https://faulklab.cfans.umn.edu/). Learn more about how Tater made history as the first Palla's Cat to have their genome sequence [here](https://twin-cities.umn.edu/news-events/u-m-researchers-map-genome-worlds-grumpiest-cat). The reads have been pre-staged on the Open Science Data Federation (OSDF) for use with this tutorial:
 
 ```
 osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/input/SRR22085263
