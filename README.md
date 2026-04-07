@@ -1,4 +1,4 @@
-# Assembling a Whole Genome with hifiasm on CHTC
+# Tutorial: Genome Assembly using Nanopore Reads on CHTC
 
 ## Introduction
 
