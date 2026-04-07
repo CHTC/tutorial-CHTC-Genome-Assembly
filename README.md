@@ -61,7 +61,7 @@ This tutorial also assumes that you:
 * Have basic command-line experience (e.g., navigating directories, using bash, editing text files)
 * Have sufficient disk quota and file permissions in your CHTC `/home` and `/staging` directories
 
-> [!NOTE]
+> [!TIP]
 > If you are new to running jobs on CHTC, complete the CHTC ["Roadmap to getting started"](https://chtc.cs.wisc.edu/uw-research-computing/htc-roadmap/) and our ["Practice: Submit HTC Jobs using HTCondor"](https://chtc.cs.wisc.edu/uw-research-computing/htcondor-job-submission) guide before starting this tutorial.
 
 ### Time Estimation
@@ -231,6 +231,7 @@ transfer_input_files = osdf:///osg-public/data/tutorial-CHTC-Genome-Assembly/inp
 > ```
 > transfer_input_files = osdf:///chtc/staging/<netid>/my_reads.fastq.gz
 > ```
+> You can also transfer your reads to the job from ResearchDrive via the CHTC-ResearchDrive integration using the UWDF. Learn more about this option on CHTC's [ResearchDrive documentation](https://chtc.cs.wisc.edu/uw-research-computing/htc-uwdf-researchdrive).
 
 #### Compressing Your Reads
 Hifiasm can accept compressed FASTQ files directly, so there is no need to decompress your reads before running the assembly. We highly recommend compressing your reads with gzip or another compression tool to reduce storage and transfer times. If your reads are not compressed, you can compress them with:
@@ -428,6 +429,10 @@ Now that you've successfully assembled the Palla's Cat genome on CHTC, here are 
 **Combine with ONT Basecalling and QC**
 * If you haven't already, complete the [ONT Basecalling and QC tutorial](https://github.com/CHTC/tutorial-ONT-Basecalling) to learn how to basecall raw ONT signal data. This will give you a deeper understanding of the input data and how it impacts assembly quality.
 * Basecall your own ONT reads with Dorado on CHTC and use those reads as input for hifiasm assembly.
+
+**Use a different assembler**
+* Try running a different assembler (e.g., Flye, Canu, Shasta) on CHTC using the same input reads to compare results. You can build your own Apptainer container for these tools using the instructions in the [Software section](#software).
+* Compare assembly metrics (N50, total length, number of contigs) across different assemblers to see how they perform on the same dataset.
 
 **Assess Assembly Quality**
 * Run QUAST to compute contiguity metrics (N50, total length, number of contigs)
