@@ -155,7 +155,7 @@ Genome assembly is the process of reconstructing a genome from sequencing reads.
 CHTC provides a shared Apptainer container for hifiasm. The submit file in this tutorial references a pre-built container image distributed via OSDF:
 
 ```
-container_image = osdf:///osg-public/containers/hifiasm.sif
+container_image = osdf:///osg-public/containers/hifiasm_08APR2026_v1.sif
 ```
 
 This container includes hifiasm (v0.19+) with ONT-only assembly support. HTCondor automatically transfers the container to the execute node, so no manual setup is required.
@@ -284,7 +284,7 @@ This will reduce the disk requirement for your reads by ~4-5x, which can signifi
 
     ```
     # Container for hifiasm genome assembler
-    container_image = osdf:///osg-public/containers/hifiasm.sif
+    container_image = osdf:///osg-public/containers/hifiasm_08APR2026_v1.sif
 
     executable = scripts/assembly.sh
     arguments = Omalun-Tater
