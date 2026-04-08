@@ -4,9 +4,9 @@ set -euo pipefail
 OUTPUT_PREFIX=$1
 
 # Run hifiasm ONT-only assembly
-hifiasm -t${PYTHON_CPU_COUNT} --ont -o ${OUTPUT_PREFIX}.asm SRR22085263.fastq.gz
+hifiasm -t${PYTHON_CPU_COUNT} --ont -o ${OUTPUT_PREFIX}.asm /staging/<NetID>/tutorial-CHTC-Genome-Assembly/SRR22085263.fastq
 
-# Cleanup input FASTQ file to save space
+# Cleanup input FASTQ to save disk space
 rm SRR22085263.fastq.gz
 
 # Convert GFA to FASTA
